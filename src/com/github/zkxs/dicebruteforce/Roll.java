@@ -34,34 +34,55 @@ public class Roll
 		REFERENCE_FOUR_AND_TWO = {1,1,1,1,2,2},
 		REFERENCE_THREE_PAIR   = {1,1,2,2,3,3};
 	
-	static
-	{
-		scoreNames = new HashMap<>();
-		scoreNames.put(Score.FIVE,            "A five");
-		scoreNames.put(Score.ONE,             "A one");
-		scoreNames.put(Score.TRIPLE1,         "1,1,1");
-		scoreNames.put(Score.TRIPLE2,         "2,2,2");
-		scoreNames.put(Score.TRIPLE3,         "3,3,3");
-		scoreNames.put(Score.TRIPLE4,         "4,4,4");
-		scoreNames.put(Score.TRIPLE5,         "5,5,5");
-		scoreNames.put(Score.TRIPLE6,         "6,6,6");
-		scoreNames.put(Score.FOUR_OF_A_KIND,  "Four-of-a-kind");
-		scoreNames.put(Score.FIVE_OF_A_KIND,  "Five-of-a-kind");
-		scoreNames.put(Score.SIX_OF_A_KIND,   "Six-of-a-kind");
-		scoreNames.put(Score.STRAIGHT,        "Straight 1-6");
-		scoreNames.put(Score.THREE_PAIR,      "Three pairs");
-		scoreNames.put(Score.FOUR_AND_TWO,    "Four-of-a-kind and a pair");
-		scoreNames.put(Score.TWO_TRIPLES,     "Two three-of-a-kinds");
-		scoreNames.put(Score.FARKLE,          "Farkle");
-	}
-	
 	public static String getScoreName(Score score)
 	{
-		return scoreNames.get(score);
+		switch (score) {
+			case FIVE:            return "A five";
+			case ONE:             return "A one";
+			case TRIPLE1:         return "1,1,1";
+			case TRIPLE2:         return "2,2,2";
+			case TRIPLE3:         return "3,3,3";
+			case TRIPLE4:         return "4,4,4";
+			case TRIPLE5:         return "5,5,5";
+			case TRIPLE6:         return "6,6,6";
+			case FOUR_OF_A_KIND:  return "Four-of-a-kind";
+			case FIVE_OF_A_KIND:  return "Five-of-a-kind";
+			case SIX_OF_A_KIND:   return "Six-of-a-kind";
+			case STRAIGHT:        return "Straight 1-6";
+			case THREE_PAIR:      return "Three pairs";
+			case FOUR_AND_TWO:    return "Four-of-a-kind and a pair";
+			case TWO_TRIPLES:     return "Two three-of-a-kinds";
+			case FARKLE:          return "Farkle";
+			default:              throw new IllegalArgumentException("Invalid Score");
+		}
 	}
 	
-	public Score score()
+	public static int getScoreValue(Score score)
 	{
+		switch (score) {
+			case FIVE:            return 50;
+			case ONE:             return 100;
+			case TRIPLE1:         return 300;
+			case TRIPLE2:         return 200;
+			case TRIPLE3:         return 300;
+			case TRIPLE4:         return 400;
+			case TRIPLE5:         return 500;
+			case TRIPLE6:         return 600;
+			case FOUR_OF_A_KIND:  return 1000;
+			case FIVE_OF_A_KIND:  return 2000;
+			case SIX_OF_A_KIND:   return 3000;
+			case STRAIGHT:        return 1500;
+			case THREE_PAIR:      return 1500;
+			case FOUR_AND_TWO:    return 1500;
+			case TWO_TRIPLES:     return 2500;
+			case FARKLE:          return 0;
+			default:              throw new IllegalArgumentException("Invalid Score");
+		}
+	}
+	
+	public int score()
+	{
+		int totalScore = 0;
 		Roll generalizedRoll = null;
 		
 		// some combinations require all 6 dice
@@ -80,22 +101,22 @@ public class Roll
 				}
 				if (isStraight)
 				{
-					return Score.STRAIGHT;
+					return getScoreValue(Score.STRAIGHT);
 				}
 			}
 			
 			generalizedRoll = this.generalize();
 			if (Arrays.equals(generalizedRoll.diceValues, REFERENCE_TWO_TRIPLES))
 			{
-				return Score.TWO_TRIPLES;
+				return getScoreValue(Score.TWO_TRIPLES);
 			}
 			if (Arrays.equals(generalizedRoll.diceValues, REFERENCE_FOUR_AND_TWO))
 			{
-				return Score.FOUR_AND_TWO;
+				return getScoreValue(Score.FOUR_AND_TWO);
 			}
 			if (Arrays.equals(generalizedRoll.diceValues, REFERENCE_THREE_PAIR))
 			{
-				return Score.THREE_PAIR;
+				return getScoreValue(Score.THREE_PAIR);
 			}
 			
 			// check for 6 of a kind
@@ -111,7 +132,7 @@ public class Roll
 				}
 				if (allSame)
 				{
-					return Score.SIX_OF_A_KIND;
+					return getScoreValue(Score.SIX_OF_A_KIND);
 				}
 			}
 		}
@@ -134,7 +155,8 @@ public class Roll
 			}
 			if (allSame)
 			{
-				return Score.FIVE_OF_A_KIND;
+				totalScore += getScoreValue(Score.FIVE_OF_A_KIND);
+				//TODO: check last die to see if it's a one or a five
 			}
 		}
 		
@@ -156,7 +178,8 @@ public class Roll
 			}
 			if (allSame)
 			{
-				return Score.FOUR_OF_A_KIND;
+				totalScore += getScoreValue(Score.FOUR_OF_A_KIND);
+				//TODO: check last two dice to see if they are ones or fives
 			}
 		}
 		
@@ -177,12 +200,12 @@ public class Roll
 				{
 					switch (currentValue)
 					{
-						case 1: return Score.TRIPLE1;
-						case 2: return Score.TRIPLE2;
-						case 3: return Score.TRIPLE3;
-						case 4: return Score.TRIPLE4;
-						case 5: return Score.TRIPLE5;
-						case 6: return Score.TRIPLE6;
+						case 1: totalScore += getScoreValue(Score.TRIPLE1); break;
+						case 2: totalScore += getScoreValue(Score.TRIPLE2); break;
+						case 3: totalScore += getScoreValue(Score.TRIPLE3); break;
+						case 4: totalScore += getScoreValue(Score.TRIPLE4); break;
+						case 5: totalScore += getScoreValue(Score.TRIPLE5); break;
+						case 6: totalScore += getScoreValue(Score.TRIPLE6); break;
 					}
 				}
 			}
@@ -206,7 +229,7 @@ public class Roll
 			}
 		}
 		
-		return Score.FARKLE;
+		return totalScore;
 	}
 	
 	public Roll(byte[] diceValues)
@@ -234,20 +257,6 @@ public class Roll
 	
 	private void generalizeSelf()
 	{
-//		byte currentFromValue = diceValues[0];
-//		byte currentToValue = 1;
-//		diceValues[0] = currentToValue;
-//		
-//		for (int idx = 1; idx < diceValues.length; idx++)
-//		{
-//			if (diceValues[idx] != currentFromValue)
-//			{
-//				currentFromValue = diceValues[idx];
-//				currentToValue += 1;
-//			}
-//			diceValues[idx] = currentToValue;
-//		}
-		
 		byte currentToValue = 1;
 		byte rollIdx = 0;
 		int[] partitions = getPartitions();
