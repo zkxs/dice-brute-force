@@ -243,31 +243,6 @@ public class Roll
 		partition = Arrays.copyOf(roll.partition, roll.partition.length);
 	}
 	
-	public Roll generalize()
-	{
-		// copy this roll
-		Roll generalizedRoll = new Roll(this);
-		
-		// generaize the copy
-		generalizedRoll.generalizeSelf();
-		
-		return generalizedRoll;
-	}
-	
-	private void generalizeSelf()
-	{
-		byte currentToValue = 1;
-		byte rollIdx = 0;
-		int[] partitions = getPartitions();
-		for (int idx = partitions.length - 1; idx >= 0 && partitions[idx] != 0; idx--) {
-			for(int i = 0; i < partitions[idx]; i++)
-			{
-				diceValues[rollIdx++] = currentToValue;
-			}
-			currentToValue += 1;
-		}
-	}
-	
 	private int[] getPartitions()
 	{
 		return partition; // todo consistent plural
