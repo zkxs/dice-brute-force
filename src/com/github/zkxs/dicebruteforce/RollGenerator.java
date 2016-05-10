@@ -1,34 +1,53 @@
 package com.github.zkxs.dicebruteforce;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 public class RollGenerator
 {	
-	byte[] currentRoll;
-	int numberOfDice;
-	byte numberOfSides;
-	Map<Roll.Score, Integer> scores = new HashMap<>();
+	private byte[] currentRoll;
+	private int numberOfDice;
+	private byte numberOfSides;
+	private Map<Integer, Integer> scores = new HashMap<>(); // mapping of scores to number of occurences
 	
 	
 	public static void main(String[] args)
 	{
-		RollGenerator rgen = new RollGenerator(6, (byte) 6);
+		//ArrayList<Map<Integer, Integer>> results = new ArrayList<>(6);
+		Set<Integer> scoreValues = new TreeSet<>();
 		
-		long startTime = System.nanoTime();
-		Map<Roll.Score, Integer> results = rgen.generate();
-		long stopTime = System.nanoTime();
-		
-		System.out.printf("Done in %fms\n\n", (stopTime - startTime) / 1_000_000d);
-		
-		
-		for (Roll.Score score : Roll.Score.values())
+		for (int numberOfDice = 6; numberOfDice > 0; numberOfDice--)
 		{
-			Integer count = results.get(score);
-			System.out.printf("%s: %d\n", Roll.getScoreName(score), count);
+			RollGenerator rgen = new RollGenerator(numberOfDice, (byte) 6);
+			long startTime = System.nanoTime();
+			Map<Integer, Integer> currentResult = rgen.generate();
+			long stopTime = System.nanoTime();
+			
+			//results.add(numberOfDice, currentResult);
+			
+			scoreValues.addAll(currentResult.keySet());
+			
+			System.out.printf("%d dice trial. Done in %fms\n", numberOfDice, (stopTime - startTime) / 1_000_000d);
+			for (Integer scoreValue : scoreValues)
+			{
+				Integer scoreCount = currentResult.getOrDefault(scoreValue, 0);
+				System.out.printf("%d: %d\n", scoreValue, scoreCount);
+			}
+			System.out.println();
 		}
 	}
 	
+	/**
+	 * Construct a new RollGenerator
+	 * @param numberOfDice Number of dice to roll
+	 * @param numberOfSides Number of sides on a die
+	 */
 	public RollGenerator(int numberOfDice, byte numberOfSides)
 	{
 		this.currentRoll = new byte[numberOfDice];
@@ -36,14 +55,18 @@ public class RollGenerator
 		this.numberOfSides = numberOfSides;
 	}
 	
-	public Map<Roll.Score, Integer> generate()
+	/**
+	 * Generate all possible rolls
+	 * @return A mapping of scores to the number of occurences of said score
+	 */
+	public Map<Integer, Integer> generate()
 	{
 		generate(0);
 		return scores;
 	}
 	
 	/**
-	 * 
+	 * Generate all possible rolls, recursively
 	 * @param currentDie index of current die
 	 */
 	private void generate(int currentDie)
@@ -58,7 +81,7 @@ public class RollGenerator
 			if (baseCase)
 			{
 				// return current roll
-				Roll roll = new Roll(currentRoll);
+				Roll roll = new Roll(currentRoll, numberOfSides);
 				scores.merge(roll.score(), 1, (a, b) -> a + b);
 			}
 			else

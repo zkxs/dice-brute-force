@@ -6,7 +6,8 @@ import java.util.Map;
 
 public class Roll
 {	
-	private int[] partition;
+	/** Counts of individual dice values. This must NOT be mutated. */
+	private int[] partitions;
 	
 	public enum Score
 	{
@@ -27,12 +28,6 @@ public class Roll
 		TWO_TRIPLES,
 		FARKLE
 	}
-	
-	private static Map<Score, String> scoreNames;
-	private static final byte[]
-		REFERENCE_TWO_TRIPLES  = {1,1,1,2,2,2},
-		REFERENCE_FOUR_AND_TWO = {1,1,1,1,2,2},
-		REFERENCE_THREE_PAIR   = {1,1,2,2,3,3};
 	
 	public static String getScoreName(Score score)
 	{
@@ -83,178 +78,161 @@ public class Roll
 	public int score()
 	{
 		int totalScore = 0;
-		Roll generalizedRoll = null;
+		int[] partition = getPartitions().clone();
 		
-		// some combinations require all 6 dice
-		if (diceValues.length == 6)
+		assert(partition.length <= 6) : "Farkle only uses 6 dice";
+		
+		// check for a straight
 		{
-			// check for a straight
+			boolean isStraight = true;
+			for (int idx = 0; idx < partition.length; idx++)
 			{
-				boolean isStraight = true;
-				for (int i = 0; i < 6; i++)
+				if (partition[idx] == 0)
 				{
-					if (diceValues[i] != i + 1)
-					{
-						isStraight = false;
-						break;
-					}
-				}
-				if (isStraight)
-				{
-					return getScoreValue(Score.STRAIGHT);
+					isStraight = false;
+					break;
 				}
 			}
-			
-			generalizedRoll = this.generalize();
-			if (Arrays.equals(generalizedRoll.diceValues, REFERENCE_TWO_TRIPLES))
+			if (isStraight)
 			{
-				return getScoreValue(Score.TWO_TRIPLES);
+				// further checking is not required as all six dice have been consumed
+				return getScoreValue(Score.STRAIGHT);
 			}
-			if (Arrays.equals(generalizedRoll.diceValues, REFERENCE_FOUR_AND_TWO))
+		}
+		
+		// check for three-pairs
+		{
+			int pairs = 0;
+			for (int idx = 0; idx < partition.length; idx++)
 			{
-				return getScoreValue(Score.FOUR_AND_TWO);
+				if (partition[idx] == 2)
+				{
+					pairs += 1;
+				}
 			}
-			if (Arrays.equals(generalizedRoll.diceValues, REFERENCE_THREE_PAIR))
+			assert (pairs <= 3) : "How can you have more than three pairs with only six dice?";
+			if (pairs == 3)
 			{
+				// further checking is not required as all six dice have been consumed
 				return getScoreValue(Score.THREE_PAIR);
 			}
-			
-			// check for 6 of a kind
+		}
+		
+		// six of a kinds
+		for (int idx = 0; idx < partition.length; idx++)
+		{
+			if (partition[idx] == 6)
 			{
-				boolean allSame = true;
-				for (int i = 0; i < 6; i++)
-				{
-					if (generalizedRoll.diceValues[i] != 1)
-					{
-						allSame = false;
-						break;
-					}
-				}
-				if (allSame)
-				{
-					return getScoreValue(Score.SIX_OF_A_KIND);
-				}
+				// further checking is not required as all six dice have been consumed
+				return getScoreValue(Score.SIX_OF_A_KIND);
 			}
 		}
 		
-		if (diceValues.length >= 5)
+		// five of a kinds
+		for (int idx = 0; idx < partition.length; idx++)
 		{
-			if (generalizedRoll == null)
-			{
-				generalizedRoll = this.generalize();
-			}
-			
-			boolean allSame = true;
-			for (int i = 0; i < 5; i++)
-			{
-				if (generalizedRoll.diceValues[i] != 1)
-				{
-					allSame = false;
-					break;
-				}
-			}
-			if (allSame)
+			if (partition[idx] == 5)
 			{
 				totalScore += getScoreValue(Score.FIVE_OF_A_KIND);
-				//TODO: check last die to see if it's a one or a five
+				partition[idx] -= 5;
+				assert(partition[idx] == 0) : "A more-than-five-of-a-kind leaked through";
 			}
 		}
 		
-		if (diceValues.length >= 4)
+		// four of a kinds
+		for (int idx = 0; idx < partition.length; idx++)
 		{
-			if (generalizedRoll == null)
+			if (partition[idx] == 4)
 			{
-				generalizedRoll = this.generalize();
-			}
-			
-			boolean allSame = true;
-			for (int i = 0; i < 4; i++)
-			{
-				if (generalizedRoll.diceValues[i] != 1)
+				partition[idx] -= 4;
+				
+				// check to see if there is an additional pair
+				for (int pairIdx = 0; pairIdx < partition.length; pairIdx++)
 				{
-					allSame = false;
-					break;
+					if (partition[idx] == 2)
+					{
+						// further checking is not required as all six dice have been consumed
+						return getScoreValue(Score.FOUR_AND_TWO);
+					}
 				}
-			}
-			if (allSame)
-			{
+				
 				totalScore += getScoreValue(Score.FOUR_OF_A_KIND);
-				//TODO: check last two dice to see if they are ones or fives
+				assert(partition[idx] == 0) : "A more-than-four-of-a-kind leaked through";
 			}
 		}
 		
 		// three of a kinds
 		{
-			int currentCount = 0;
-			byte currentValue = -1;
-			
-			for (int idx = 0; idx < diceValues.length; idx++)
+			int tripleIdx = -1; // not -1 if a triple has been found
+			for (int idx = 0; idx < partition.length; idx++)
 			{
-				if (diceValues[idx] != currentValue)
+				if (partition[idx] == 3)
 				{
-					currentValue = diceValues[idx];
-					currentCount = 0;
-				}
-				currentCount += 1;
-				if (currentCount == 3)
-				{
-					switch (currentValue)
+					if (tripleIdx != -1)
 					{
-						case 1: totalScore += getScoreValue(Score.TRIPLE1); break;
-						case 2: totalScore += getScoreValue(Score.TRIPLE2); break;
-						case 3: totalScore += getScoreValue(Score.TRIPLE3); break;
-						case 4: totalScore += getScoreValue(Score.TRIPLE4); break;
-						case 5: totalScore += getScoreValue(Score.TRIPLE5); break;
-						case 6: totalScore += getScoreValue(Score.TRIPLE6); break;
+						// a second triple was just found
+						return getScoreValue(Score.TWO_TRIPLES);
+					}
+					else
+					{
+						tripleIdx = idx;
 					}
 				}
+			}
+			
+			if (tripleIdx != -1)
+			{
+				switch (tripleIdx + 1)
+				{
+					case 1: totalScore += getScoreValue(Score.TRIPLE1); break;
+					case 2: totalScore += getScoreValue(Score.TRIPLE2); break;
+					case 3: totalScore += getScoreValue(Score.TRIPLE3); break;
+					case 4: totalScore += getScoreValue(Score.TRIPLE4); break;
+					case 5: totalScore += getScoreValue(Score.TRIPLE5); break;
+					case 6: totalScore += getScoreValue(Score.TRIPLE6); break;
+				}
+				partition[tripleIdx] -= 3;
+				
+				assert(partition[tripleIdx] == 0) : "A more-than-three-of-a-kind leaked through";
 			}
 		}
 		
 		// any ones?
-		for (int idx = 0; idx < diceValues.length; idx++)
-		{
-			if (diceValues[idx] == 1)
-			{
-				return Score.ONE;
-			}
-		}
+		totalScore += partition[1 - 1] * getScoreValue(Score.ONE);
 		
 		// any fives?
-		for (int idx = 0; idx < diceValues.length; idx++)
-		{
-			if (diceValues[idx] == 5)
-			{
-				return Score.FIVE;
-			}
-		}
+		totalScore += partition[5 - 1] * getScoreValue(Score.FIVE);
 		
 		return totalScore;
 	}
 	
-	public Roll(byte[] diceValues)
+	public Roll(byte[] diceValues, byte numberOfSides)
 	{
-		partition = computePartitions(diceValues);
+		partitions = computePartitions(diceValues, numberOfSides);
 	}
 	
 	public Roll(Roll roll)
 	{
 		// no copying is required because partition is never mutated
-		partition = Arrays.copyOf(roll.partition, roll.partition.length);
+		partitions = roll.partitions;
 	}
 	
+	/**
+	 * Get the counts of dice values.
+	 * @return the partition array. This array must NOT be mutated.
+	 */
 	private int[] getPartitions()
 	{
-		return partition; // todo consistent plural
+		return partitions;
 	}
 	
-	private int[] computePartitions(byte[] diceValues)
+	private int[] computePartitions(byte[] diceValues, byte numberOfSides)
 	{
-		int[] partitions = new int[diceValues.length];
+		int[] partitions = new int[numberOfSides];
 		
 		for (int idx = 0; idx < diceValues.length; idx++)
 		{
-			partition[diceValues[idx] - 1] += 1;
+			partitions[diceValues[idx] - 1] += 1;
 		}
 		return partitions;
 	}
@@ -264,7 +242,7 @@ public class Roll
 	{
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + Arrays.hashCode(partition);
+		result = prime * result + Arrays.hashCode(partitions);
 		return result;
 	}
 
@@ -275,13 +253,13 @@ public class Roll
 		if (obj == null) return false;
 		if (getClass() != obj.getClass()) return false;
 		Roll other = (Roll) obj;
-		if (!Arrays.equals(partition, other.partition)) return false;
+		if (!Arrays.equals(partitions, other.partitions)) return false;
 		return true;
 	}
 	
 	@Override
 	public String toString()
 	{
-		return Arrays.toString(partition);
+		return Arrays.toString(partitions);
 	}
 }
