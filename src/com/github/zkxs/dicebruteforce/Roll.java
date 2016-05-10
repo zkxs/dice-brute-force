@@ -6,7 +6,7 @@ import java.util.Map;
 
 public class Roll
 {	
-	private byte[] diceValues;
+	private int[] partition;
 	
 	public enum Score
 	{
@@ -234,14 +234,13 @@ public class Roll
 	
 	public Roll(byte[] diceValues)
 	{
-		this.diceValues = Arrays.copyOf(diceValues, diceValues.length);
-		Arrays.sort(this.diceValues);
+		partition = computePartitions(diceValues);
 	}
 	
 	public Roll(Roll roll)
 	{
-		this.diceValues = Arrays.copyOf(roll.diceValues, roll.diceValues.length);
-		// no sorting is required because existing rolls are pre-sorted
+		// no copying is required because partition is never mutated
+		partition = Arrays.copyOf(roll.partition, roll.partition.length);
 	}
 	
 	public Roll generalize()
@@ -271,21 +270,17 @@ public class Roll
 	
 	private int[] getPartitions()
 	{
+		return partition; // todo consistent plural
+	}
+	
+	private int[] computePartitions(byte[] diceValues)
+	{
 		int[] partitions = new int[diceValues.length];
-		int partitionIdx = -1;
-		byte currentValue = -1;
 		
 		for (int idx = 0; idx < diceValues.length; idx++)
 		{
-			if (diceValues[idx] != currentValue)
-			{
-				currentValue = diceValues[idx];
-				partitionIdx += 1;
-			}
-			partitions[partitionIdx] += 1;
+			partition[diceValues[idx] - 1] += 1;
 		}
-		
-		Arrays.sort(partitions);
 		return partitions;
 	}
 
@@ -294,7 +289,7 @@ public class Roll
 	{
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + Arrays.hashCode(diceValues);
+		result = prime * result + Arrays.hashCode(partition);
 		return result;
 	}
 
@@ -305,13 +300,13 @@ public class Roll
 		if (obj == null) return false;
 		if (getClass() != obj.getClass()) return false;
 		Roll other = (Roll) obj;
-		if (!Arrays.equals(diceValues, other.diceValues)) return false;
+		if (!Arrays.equals(partition, other.partition)) return false;
 		return true;
 	}
 	
 	@Override
 	public String toString()
 	{
-		return Arrays.toString(diceValues);
+		return Arrays.toString(partition);
 	}
 }
